@@ -14,17 +14,21 @@ from selenium.webdriver.chrome.options import Options
 import pyodbc
 
 
-class updt_query:
+class CompanyQuery:
     def __init__(self, server, db, uid, psw, base_table, updt_table, date):
         self.server = server
         self.db = db
         self.uid = uid
         self.psw = psw
-        self.base_table, = base_table
-        self.updt_table, = updt_table,
+        self.base_table = base_table
+        self.updt_table = updt_table
         self.date = self.date
 
-    def retrieve_updt_data(self):
+    def retrieve_updated_data(self):
+        """ Retrieve data as data frame
+
+        :return: updated data frame
+        """
         try:
             conn = pyodbc.connect(
                 'DRIVER={ODBC Driver 17 for SQL Server}; SERVER=%s; DATABASE=%s; UID=%s; PWD=%s; Trusted_Connection=no;' % (
@@ -42,14 +46,19 @@ class updt_query:
               '''.format(self.base_table, self.updt_table)
             cursor.execute(query_command)
             conn.commit()
-            new_updt_df = pd.read_sql(query_command, conn)
+            new_updated_df = pd.read_sql(query_command, conn)
             cursor.close()
             conn.close()
         except Exception as e:
             print(e)
-        return new_updt_df
+
+        return new_updated_df
 
     def delete_data(self, delete_list):
+        """
+
+        :param delete_list:
+        """
         try:
             conn = pyodbc.connect(
                 'DRIVER={ODBC Driver 17 for SQL Server}; SERVER=%s; DATABASE=%s; UID=%s; PWD=%s; Trusted_Connection=no;' % (
@@ -66,6 +75,11 @@ class updt_query:
 
 
 def get_stock_info(stock_list):
+    """ Get xxx stock info
+
+    :param stock_list: the list of stock ticker/number
+    :return: stock info DataFrame
+    """
     chrome_options = Options()
     chrome_options.add_argument('--headless')
     # ua=UserAgent()
@@ -73,10 +87,10 @@ def get_stock_info(stock_list):
         'user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:65.0) Gecko/20100101 Firefox/65.0')
     browser = webdriver.Chrome(chrome_options=chrome_options)
     browser.get('https://mops.twse.com.tw/mops/web/t05st03')  # 股票資訊
-    stock_nm_ch = []
+    stock_name_chinese = []
     stock_id = []
-    comp_cat = []
-    category = []
+    comp_cat = []   # what is comp_cat
+    category = []   # what kind of category
     for i in stock_list:
         input = browser.find_element_by_xpath('//*[@id="co_id"]')
         time.sleep(random.randint(2, 5))
@@ -90,12 +104,12 @@ def get_stock_info(stock_list):
         # print([n.get_text() for n in soup.select('div#autoCompilete-dbody1')][0].split(' ')[1])
         if [n.get_text() for n in soup.select('div#autoCompilete-dbody1')] == []:
             stock_id.append(i)
-            stock_nm_ch.append('')
+            stock_name_chinese.append('')
             comp_cat.append('')
             category.append('')
         else:
             stock_id.append(i)
-            stock_nm_ch.append([n.get_text() for n in soup.select('div#autoCompilete-dbody1')][0].split(' ')[1])
+            stock_name_chinese.append([n.get_text() for n in soup.select('div#autoCompilete-dbody1')][0].split(' ')[1])
             comp_cat.append([i.get_text() for i in soup.select('li#auto-title')][0])
             category.append([i.get_text()[:2] for i in soup.select('li#auto-title')][0])
         print(i)
@@ -103,7 +117,7 @@ def get_stock_info(stock_list):
     browser.quit()
     key_stock_info = pd.DataFrame({
         'stock_id': stock_id,
-        'stock_nm': stock_nm_ch,
+        'stock_nm': stock_name_chinese,
         'comp_cat': comp_cat,
         'category': category})
     try:
@@ -120,9 +134,9 @@ def get_stock_info(stock_list):
             conn.commit()
         cursor.close()
         conn.close()
-
     except Exception as e:
         print(e)
+
     return key_stock_info
 
 
@@ -133,15 +147,15 @@ if __name__ == '__main__':
     uid = 'uid'
     psw = 'psw'
     base_table =
-    updt_table =
-    check_data = updt_query(server, db, uid, psw, base_table, updt_table, date)
-    new_updt_df = check_data.retrieve_updt_data()
-    if len(new_updt_df) == 0:
+    updated_table =
+    company_query = CompanyQuery(server, db, uid, psw, base_table, updated_table, date)
+    updated_stock_df = company_query.retrieve_updated_data()
+    if len(updated_stock_df) == 0:
         pass
-    elif new_updt_df['Keyword_Level2'].isnull().value.any():
-        add = new_updt_df[new_updt_df['stock_id'].isnull()]['Keyword_Level2'].to_list()
+    elif updated_stock_df['Keyword_Level2'].isnull().value.any():
+        add = updated_stock_df[updated_stock_df['stock_id'].isnull()]['Keyword_Level2'].to_list()
         key_stock_info = get_stock_info(add)
-    elif new_updt_df['stock_id'].isnull().value.any():
-        delete_list = new_updt_df[new_updt_df['Keyword_Level2'].isnull()]['stock_id'].to_list()
-        updt_query.retrieve_updt_data
+    elif updated_stock_df['stock_id'].isnull().value.any():
+        delete_list = updated_stock_df[updated_stock_df['Keyword_Level2'].isnull()]['stock_id'].to_list()
+        CompanyQuery.retrieve_updated_data
 
